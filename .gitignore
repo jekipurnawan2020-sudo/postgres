@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.env
+logs/*
+!logs/.gitkeep
+.vscode/
