@@ -10,3 +10,6 @@ class InitialLoader:
 
 	def load(self, schema: str, table: str) -> list[dict[str, Any]]:
 		return self.sqlserver.query(f'SELECT TOP (?) * FROM [{schema}].[{table}]', (self.batch_size,))
+
+	def stream(self, schema: str, table: str):
+		return self.sqlserver.stream(f'SELECT * FROM [{schema}].[{table}]')

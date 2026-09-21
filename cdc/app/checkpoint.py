@@ -22,6 +22,7 @@ class CheckpointStore:
 	def ensure_table(self) -> None:
 		schema, table = self.settings.checkpoint_table.split(".", 1)
 		with self.connect().cursor() as cursor:
+			cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{self.settings.target_schema}"')
 			cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
 			cursor.execute(f'''CREATE TABLE IF NOT EXISTS "{schema}"."{table}" (
 				capture_instance text PRIMARY KEY,

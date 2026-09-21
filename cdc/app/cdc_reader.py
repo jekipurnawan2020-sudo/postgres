@@ -10,7 +10,7 @@ class CdcReader:
 
 	def read(self, capture_instance: str, from_lsn: str | None) -> list[dict[str, Any]]:
 		if from_lsn:
-			query = f'''DECLARE @from_lsn binary(10) = CONVERT(binary(10), ?, 2);
+			query = f'''DECLARE @from_lsn binary(10) = sys.fn_cdc_increment_lsn(CONVERT(binary(10), ?, 2));
 				DECLARE @to_lsn binary(10) = sys.fn_cdc_get_max_lsn();
 				SELECT TOP (?) * FROM cdc.fn_cdc_get_all_changes_{capture_instance}
 				(@from_lsn, @to_lsn, 'all') ORDER BY __$start_lsn, __$seqval;'''

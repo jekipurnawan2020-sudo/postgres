@@ -28,6 +28,13 @@ class Settings:
 	cdc_batch_size: int
 	cdc_poll_interval: float
 	checkpoint_table: str
+	target_schema: str
+	connect_rest_url: str
+	initial_load_enabled: bool
+	register_connectors: bool
+	connector_tasks_max: int
+	connector_auto_create: bool
+	connector_auto_evolve: bool
 
 
 def load_settings() -> Settings:
@@ -49,4 +56,11 @@ def load_settings() -> Settings:
 		cdc_batch_size=int(_env("CDC_BATCH_SIZE", "1000")),
 		cdc_poll_interval=float(_env("CDC_POLL_INTERVAL", "1")),
 		checkpoint_table=_env("CHECKPOINT_TABLE", "migration_control.cdc_checkpoint"),
+		target_schema=_env("TARGET_SCHEMA", "solarwinds"),
+		connect_rest_url=_env("CONNECT_REST_URL", "http://kafka-connect:8083"),
+		initial_load_enabled=_env("INITIAL_LOAD_ENABLED", "false").lower() == "true",
+		register_connectors=_env("REGISTER_CONNECTORS", "true").lower() == "true",
+		connector_tasks_max=int(_env("CONNECTOR_TASKS_MAX", "1")),
+		connector_auto_create=_env("CONNECTOR_AUTO_CREATE", "true").lower() == "true",
+		connector_auto_evolve=_env("CONNECTOR_AUTO_EVOLVE", "true").lower() == "true",
 	)

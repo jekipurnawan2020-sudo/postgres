@@ -8,6 +8,7 @@ class CaptureTable:
     schema: str
     table: str
     capture_instance: str
+    primary_keys: tuple[str, ...]
 
 
 class Metadata:
@@ -17,10 +18,26 @@ class Metadata:
     def capture_tables(self) -> list[CaptureTable]:
         rows = self.sqlserver.query(
             """
-            SELECT source_schema, source_table, capture_instance
-            FROM cdc.change_tables
-            WHERE supports_net_changes = 1 OR supports_net_changes = 0
-            ORDER BY source_schema, source_table
+            SELECT ct.source_schema, ct.source_table, ct.capture_instance,
+                   c.name AS column_name, ic.key_ordinal
+            FROM cdc.change_tables AS ct
+            LEFT JOIN sys.tables AS t ON t.object_id = ct.source_object_id
+            LEFT JOIN sys.indexes AS i ON i.object_id = t.object_id AND i.is_primary_key = 1
+            LEFT JOIN sys.index_columns AS ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+            LEFT JOIN sys.columns AS c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+            WHERE ct.source_database = DB_NAME()
+            ORDER BY ct.source_schema, ct.source_table, ic.key_ordinal
             """
         )
-        return [CaptureTable(row["source_schema"], row["source_table"], row["capture_instance"]) for row in rows]
+        grouped: dict[str, dict[str, object]] = {}
+        for row in rows:
+            key = row["capture_instance"]
+            item = grouped.setdefault(key, {
+                "schema": row["source_schema"],
+                "table": row["source_table"],
+                "primary_keys": [],
+            })
+            if row["column_name"]:
+                item["primary_keys"].append(row["column_name"])
+        return [CaptureTable(item["schema"], item["table"], key, tuple(item["primary_keys"]))
+                for key, item in grouped.items()]

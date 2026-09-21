@@ -37,6 +37,11 @@ class SqlServer:
 		for row in cursor:
 			yield dict(zip(columns, row))
 
+	def current_lsn(self) -> str:
+		row = self.query("SELECT sys.fn_cdc_get_max_lsn() AS current_lsn")[0]
+		value = row["current_lsn"]
+		return value.hex().upper() if isinstance(value, bytes) else str(value)
+
 	def close(self) -> None:
 		if self.connection is not None:
 			self.connection.close()
