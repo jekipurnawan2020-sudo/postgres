@@ -56,9 +56,9 @@ Kalau Anda ingin **preview** DDL-nya sebelum stack pertama kali dinyalakan, jala
 ### 5. Start stack
 
 ```bash
-docker compose up -d --build
-docker compose ps
-docker compose logs -f cdc
+docker-compose up -d --build
+docker-compose ps
+docker-compose logs -f cdc
 ```
 
 Service CDC akan:
@@ -87,8 +87,8 @@ Initial load mengambil `max_lsn` lebih dulu, mengirim snapshot, lalu membaca CDC
 ## Monitoring dan troubleshooting
 
 ```bash
-docker compose logs -f cdc
-docker compose logs -f kafka-connect
+docker-compose logs -f cdc
+docker-compose logs -f kafka-connect
 curl http://localhost:8083/connectors
 curl http://localhost:8083/connectors/<connector-name>/status
 ```

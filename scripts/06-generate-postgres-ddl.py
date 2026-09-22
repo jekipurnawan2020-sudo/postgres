@@ -50,7 +50,7 @@ Cara pakai (step by step)
             -f scripts/generated/postgres-ddl-<timestamp>.sql
    atau langsung dari script ini dengan flag --apply:
        python scripts/06-generate-postgres-ddl.py --apply
-6. `docker compose up -d --build` seperti biasa.
+6. `docker-compose up -d --build` seperti biasa.
 
 Catatan penting soal huruf besar/kecil (case sensitivity)
 -----------------------------------------------------------
@@ -225,7 +225,7 @@ def main() -> None:
         print("Done. cdc/app/schema_sync.py will keep re-applying this idempotently on every container start.")
     else:
         print("Dry run only. Review the file, then re-run with --apply or psql -f <file>.")
-        print("Note: cdc/app/schema_sync.py already does this automatically on every 'docker compose up'.")
+        print("Note: cdc/app/schema_sync.py already does this automatically on every 'docker-compose up'.")
 
 
 if __name__ == "__main__":

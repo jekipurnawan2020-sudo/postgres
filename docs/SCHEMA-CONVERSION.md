@@ -83,12 +83,12 @@ Kalau ini tidak konsisten, JDBC Sink akan menganggap kolom "belum ada" dan menco
 ## 6. Batasan yang tetap perlu perhatian manual
 
 - **Kolom baru dari upgrade modul SolarWinds** (NPM/SAM/NTA/IPAM/NCM menambah kolom di versi baru): `CONNECTOR_AUTO_EVOLVE=true` di `.env` akan tetap membuat kolom baru itu otomatis via JDBC Sink, tapi tipenya kembali ditebak dari JSON (masalah yang sama seperti di bagian 1, khusus untuk kolom yang baru itu saja). Jalankan ulang `scripts/06-generate-postgres-ddl.py` atau restart container `cdc` (schema_sync jalan lagi) setelah upgrade modul untuk menyamakan tipenya — schema_sync tidak melakukan `ALTER TABLE ADD COLUMN` otomatis untuk tabel yang sudah ada, hanya `CREATE TABLE IF NOT EXISTS` untuk tabel yang belum ada.
-- **Tipe eksotis** (`sql_variant`, `geography`, `geometry`, `hierarchyid`) dipetakan ke `text` — cek log container (`docker compose logs cdc | grep WARNING`) untuk tahu kolom mana yang terkena, lalu sesuaikan manual di PostgreSQL bila representasi teks tidak cukup untuk kebutuhan Anda.
+- **Tipe eksotis** (`sql_variant`, `geography`, `geometry`, `hierarchyid`) dipetakan ke `text` — cek log container (`docker-compose logs cdc | grep WARNING`) untuk tahu kolom mana yang terkena, lalu sesuaikan manual di PostgreSQL bila representasi teks tidak cukup untuk kebutuhan Anda.
 
 ## 7. Cara verifikasi
 
 ```bash
-docker compose logs -f cdc
+docker-compose logs -f cdc
 # cari baris: "Schema sync applied for N table(s) in schema 'solarwinds'"
 # cari baris berlevel WARNING untuk kolom yang perlu direview
 ```

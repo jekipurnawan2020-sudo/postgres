@@ -13,7 +13,7 @@ Runbook ini menyeberangi tiga lingkungan berbeda — setiap fase saya tandai mes
 | Label | Mesin | OS | Dipakai untuk |
 |---|---|---|---|
 | 🪟 **SQLSRV** | Server SQL Server (SolarWinds) | Windows Server 2019 | SSMS, T-SQL admin (CDC, akun) |
-| 🐧 **DOCKER** | Server PostgreSQL | Ubuntu (Postgres native + Docker Engine untuk kafka/kafka-connect/cdc) | `docker compose`, `psql`, deploy stack |
+| 🐧 **DOCKER** | Server PostgreSQL | Ubuntu (Postgres native + Docker Engine untuk kafka/kafka-connect/cdc) | `docker-compose`, `psql`, deploy stack |
 | 💻 **WORK** | Mesin kerja Anda sekarang (`c:\postgres`) | Windows | Edit kode, `git push`/`pull`, opsional jalankan script Python kalau ada akses jaringan langsung |
 
 Karena OS berbeda, perintah shell di runbook ini beda gaya: blok berlabel `sql` dijalankan di SSMS (🪟 SQLSRV), blok `bash` dijalankan di terminal Ubuntu lewat SSH (🐧 DOCKER).
@@ -213,7 +213,7 @@ psql -h 127.0.0.1 -p 5432 -U migration_user -d migratedb -c "SELECT current_user
 Verifikasi **dari dalam container** juga penting (ini yang benar-benar dipakai nanti) — setelah Fase 8, container manapun bisa dites:
 
 ```bash
-docker compose exec cdc python -c "import psycopg,os; c=psycopg.connect(host=os.environ['POSTGRES_HOST'],port=os.environ['POSTGRES_PORT'],dbname=os.environ['POSTGRES_DB'],user=os.environ['POSTGRES_USER'],password=os.environ['POSTGRES_PASSWORD']); print('OK', c.info.status)"
+docker-compose exec cdc python -c "import psycopg,os; c=psycopg.connect(host=os.environ['POSTGRES_HOST'],port=os.environ['POSTGRES_PORT'],dbname=os.environ['POSTGRES_DB'],user=os.environ['POSTGRES_USER'],password=os.environ['POSTGRES_PASSWORD']); print('OK', c.info.status)"
 ```
 
 ---
@@ -278,8 +278,8 @@ Skema tabel target (`solarwinds.<tabel>`) sekarang dibuat **otomatis** oleh [cdc
 **Cara yang direkomendasikan — lewat container di 🐧 DOCKER** (image `cdc` sudah punya ODBC Driver 18 + pyodbc + psycopg terpasang, tidak perlu instal apa pun tambahan di Ubuntu bare-metal):
 
 ```bash
-docker compose build cdc
-docker compose run --rm -v "$(pwd)/scripts/generated:/app/scripts/generated" cdc \
+docker-compose build cdc
+docker-compose run --rm -v "$(pwd)/scripts/generated:/app/scripts/generated" cdc \
   python scripts/06-generate-postgres-ddl.py
 ```
 
@@ -392,7 +392,7 @@ Prinsipnya: ambil snapshot data sekali lewat tool bulk-copy (jauh lebih cepat da
      ```
      Catatan: pgloader membuat tabelnya sendiri dengan pemetaan tipe versinya sendiri — untuk tabel yang di-backfill lewat pgloader, **jangan** biarkan `schema_sync.py` membuat ulang tabel itu duluan (tidak masalah kalau urutannya pgloader dulu baru start stack, karena `CREATE TABLE IF NOT EXISTS` di `schema_sync.py` akan otomatis skip tabel yang sudah ada).
    - **bcp** (built-in tools SQL Server, jalan dari 🪟 SQLSRV) export ke file `.csv`/native format, salin ke Ubuntu, lalu `psql \copy` atau `COPY ... FROM` untuk impor — lebih manual tapi tidak butuh instalasi tool tambahan di Ubuntu.
-4. **Seed checkpoint** — masukkan LSN dari langkah 2 ke `migration_control.cdc_checkpoint` untuk `capture_instance` tabel itu **sebelum** `docker compose up` (Fase 9):
+4. **Seed checkpoint** — masukkan LSN dari langkah 2 ke `migration_control.cdc_checkpoint` untuk `capture_instance` tabel itu **sebelum** `docker-compose up` (Fase 9):
    ```bash
    psql -h 127.0.0.1 -U migration_user -d migratedb -c "
    INSERT INTO migration_control.cdc_checkpoint (capture_instance, start_lsn)
@@ -411,9 +411,9 @@ Kalau Anda mau jalan opsi bulk ini untuk tabel tertentu, beri tahu saya nama tab
 
 ```bash
 git pull
-docker compose up -d --build
-docker compose ps
-docker compose logs -f cdc
+docker-compose up -d --build
+docker-compose ps
+docker-compose logs -f cdc
 ```
 
 Tunggu sampai muncul log berurutan seperti ini (normal, tidak perlu campur tangan):
@@ -462,8 +462,8 @@ Tunggu sampai muncul log berurutan seperti ini (normal, tidak perlu campur tanga
 
 ## Fase 11 — Operasional & rollback
 
-- Monitoring harian (🐧 DOCKER): `docker compose logs -f cdc`, `docker compose logs -f kafka-connect`, cek `migration_control.cdc_checkpoint`.
+- Monitoring harian (🐧 DOCKER): `docker-compose logs -f cdc`, `docker-compose logs -f kafka-connect`, cek `migration_control.cdc_checkpoint`.
 - **Jangan** hapus volume `solarwonds-kafka-data` atau tabel checkpoint selagi pipeline berjalan — akan menghilangkan posisi resume.
-- Kalau perlu berhenti sementara: `docker compose stop` (bukan `down -v`, supaya volume tetap ada). Saat `docker compose up` lagi, pipeline lanjut dari checkpoint terakhir.
+- Kalau perlu berhenti sementara: `docker-compose stop` (bukan `down -v`, supaya volume tetap ada). Saat `docker-compose up` lagi, pipeline lanjut dari checkpoint terakhir.
 - Kalau perlu mengulang initial load satu tabel dari nol: hapus baris capture instance tabel itu dari `migration_control.cdc_checkpoint`, restart container `cdc`.
 - SQL Server sisi source **tidak pernah** diubah oleh operasional harian pipeline ini (lihat jaminan read-only di [docs/SCHEMA-CONVERSION.md](SCHEMA-CONVERSION.md) bagian 3) — aman dijalankan berdampingan dengan SolarWinds yang tetap production-live di Windows Server 2019.
