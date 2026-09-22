@@ -26,12 +26,13 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY cdc/requirements.txt .
 
 RUN pip install \
     --no-cache-dir \
     -r requirements.txt
 
-COPY app ./app
+COPY cdc/app ./app
+COPY scripts ./scripts
 
 CMD ["python", "-u", "app/main.py"]

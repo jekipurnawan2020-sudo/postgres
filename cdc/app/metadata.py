@@ -25,7 +25,6 @@ class Metadata:
             LEFT JOIN sys.indexes AS i ON i.object_id = t.object_id AND i.is_primary_key = 1
             LEFT JOIN sys.index_columns AS ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
             LEFT JOIN sys.columns AS c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-            WHERE ct.source_database = DB_NAME()
             ORDER BY ct.source_schema, ct.source_table, ic.key_ordinal
             """
         )

@@ -54,8 +54,8 @@ services:
 
   cdc:
     build:
-      context: ./cdc
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: cdc/Dockerfile
     container_name: solarwonds-cdc
     depends_on: [kafka]
     env_file: [.env]
