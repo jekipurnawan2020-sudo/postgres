@@ -28,7 +28,7 @@ BEGIN
 		@source_schema = @schema,
 		@source_name = @table,
 		@role_name = NULL,
-		@supports_net_changes = 1;
+		@supports_net_changes = 0;
 	FETCH NEXT FROM table_cursor INTO @schema, @table;
 END;
 CLOSE table_cursor;
