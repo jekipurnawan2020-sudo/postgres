@@ -20,6 +20,7 @@ class SqlServer:
 				f"UID={self.settings.sqlserver_user};PWD={self.settings.sqlserver_password};"
 				f"Encrypt={self.settings.sqlserver_encrypt};"
 				f"TrustServerCertificate={self.settings.sqlserver_trust_server_certificate};"
+				"Connect Timeout=60;"
 			)
 			self.connection = pyodbc.connect(connection_string, autocommit=True, timeout=60)
 		return self.connection
