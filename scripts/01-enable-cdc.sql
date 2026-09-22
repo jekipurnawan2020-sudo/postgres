@@ -1,4 +1,4 @@
-USE [SolarWinds];
+USE [SolarWindsOrion];
 GO
 EXEC sys.sp_cdc_enable_db;
 GO

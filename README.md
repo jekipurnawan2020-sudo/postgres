@@ -20,7 +20,7 @@ Topologi acuan: SQL Server (SolarWinds) di **Windows Server 2019**, PostgreSQL n
 
 Sesuaikan minimal:
 
-- `SQLSERVER_HOST`, `SQLSERVER_PORT`, `SQLSERVER_DATABASE=SolarWinds`, `SQLSERVER_USER`, `SQLSERVER_PASSWORD`.
+- `SQLSERVER_HOST`, `SQLSERVER_PORT`, `SQLSERVER_DATABASE=SolarWindsOrion`, `SQLSERVER_USER`, `SQLSERVER_PASSWORD`.
 - `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`.
 - `KAFKA_ADVERTISED_HOST` jika Kafka diakses dari host lain.
 - `TARGET_SCHEMA` untuk schema tujuan PostgreSQL.
@@ -35,7 +35,7 @@ Di SQL Server jalankan [scripts/00-discovery-database.sql](scripts/00-discovery-
 
 ### 2. Aktifkan CDC
 
-Di database `SolarWinds`, jalankan [scripts/01-enable-cdc.sql](scripts/01-enable-cdc.sql). Script ini:
+Di database `SolarWindsOrion`, jalankan [scripts/01-enable-cdc.sql](scripts/01-enable-cdc.sql). Script ini:
 
 1. Mengaktifkan CDC pada database.
 2. Menemukan semua tabel user yang memiliki primary key.
