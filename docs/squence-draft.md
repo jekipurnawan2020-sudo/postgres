@@ -41,7 +41,7 @@ GO
 CREATE LOGIN cdc_user WITH PASSWORD = 'GANTI_DENGAN_PASSWORD_KUAT', CHECK_POLICY = ON;
 GO
 
-USE [SolarWindsOrion];
+USE [SolarWindsOrion26];
 GO
 CREATE USER cdc_user FOR LOGIN cdc_user;
 GO
@@ -52,7 +52,7 @@ GO
 Fallback kalau `db_datareader` ternyata kurang (error permission saat container `cdc` jalan):
 
 ```sql
-USE [SolarWindsOrion];
+USE [SolarWindsOrion26];
 GO
 GRANT SELECT ON SCHEMA::cdc TO cdc_user;
 GO
@@ -61,8 +61,8 @@ GO
 ### 1c. Cek user & role setelah dibuat
 
 ```sql
--- role database yang dipegang cdc_user di SolarWindsOrion
-USE [SolarWindsOrion];
+-- role database yang dipegang cdc_user di SolarWindsOrion26
+USE [SolarWindsOrion26];
 GO
 SELECT dp.name AS user_name, dp.type_desc,
        STRING_AGG(rp.name, ', ') AS roles

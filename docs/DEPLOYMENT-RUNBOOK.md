@@ -98,7 +98,7 @@ GO
 CREATE LOGIN cdc_user WITH PASSWORD = 'GANTI_DENGAN_PASSWORD_KUAT', CHECK_POLICY = ON;
 GO
 
-USE [SolarWindsOrion];
+USE [SolarWindsOrion26];
 GO
 CREATE USER cdc_user FOR LOGIN cdc_user;
 GO
@@ -106,14 +106,14 @@ ALTER ROLE db_datareader ADD MEMBER cdc_user;
 GO
 ```
 
-Kalau Anda **sudah punya akun existing** yang ingin dipakai ulang: cukup jalankan bagian `ALTER ROLE db_datareader ADD MEMBER <nama_login_existing>;` pada database `SolarWindsOrion` untuk login tersebut, dan pastikan login itu SQL Login (bukan Windows-only) — kalau login existing Anda tipe Windows/AD, container Linux **tidak bisa** memakainya (tidak ada domain join), harus tetap SQL Login baru seperti di atas.
+Kalau Anda **sudah punya akun existing** yang ingin dipakai ulang: cukup jalankan bagian `ALTER ROLE db_datareader ADD MEMBER <nama_login_existing>;` pada database `SolarWindsOrion26` untuk login tersebut, dan pastikan login itu SQL Login (bukan Windows-only) — kalau login existing Anda tipe Windows/AD, container Linux **tidak bisa** memakainya (tidak ada domain join), harus tetap SQL Login baru seperti di atas.
 
 **Kenapa `db_datareader` cukup**: [scripts/01-enable-cdc.sql](../scripts/01-enable-cdc.sql) mengaktifkan capture instance dengan `@role_name = NULL`, artinya SQL Server **tidak** memberlakukan gating role khusus untuk data CDC — siapa pun yang punya hak `SELECT` ke tabel sumber otomatis juga bisa membaca `cdc.fn_cdc_get_all_changes_*` untuk tabel itu.
 
 **Kalau ternyata kurang** (error permission saat container `cdc` jalan), fallback:
 
 ```sql
-USE [SolarWindsOrion];
+USE [SolarWindsOrion26];
 GO
 GRANT SELECT ON SCHEMA::cdc TO cdc_user;
 GO
@@ -234,7 +234,7 @@ Catat hasilnya: jumlah tabel, tabel besar (row count tinggi — jadi perhatian u
 
 Login pakai akun **admin** (bukan `cdc_user`).
 
-1. Jalankan `scripts/01-enable-cdc.sql` di database `SolarWindsOrion`, **satu eksekusi penuh** dari baris paling atas sampai paling bawah (jangan select sebagian — variabel/cursor T-SQL cuma hidup dalam satu batch, kalau dipisah akan error "Must declare the scalar variable").
+1. Jalankan `scripts/01-enable-cdc.sql` di database `SolarWindsOrion26`, **satu eksekusi penuh** dari baris paling atas sampai paling bawah (jangan select sebagian — variabel/cursor T-SQL cuma hidup dalam satu batch, kalau dipisah akan error "Must declare the scalar variable").
 2. Verifikasi:
 
 ```
@@ -302,7 +302,7 @@ Edit di 💻 WORK, lalu commit/pull ke 🐧 DOCKER (jangan copy manual file ment
 
 ```
 SQLSERVER_HOST=<IP SQL Server>
-SQLSERVER_DATABASE=SolarWindsOrion
+SQLSERVER_DATABASE=SolarWindsOrion26
 SQLSERVER_USER=cdc_user
 SQLSERVER_PASSWORD=<password dari Fase 1c>
 
@@ -387,7 +387,7 @@ Prinsipnya: ambil snapshot data sekali lewat tool bulk-copy (jauh lebih cepat da
    - **pgloader** — paling praktis untuk migrasi MSSQL→Postgres, satu perintah men-transfer skema+data langsung lewat FreeTDS tanpa file perantara:
      ```bash
      sudo apt install pgloader
-     pgloader mssql://cdc_user:<password>@<IP_SQLSERVER>/SolarWindsOrion?tables=InterfaceTraffic \
+     pgloader mssql://cdc_user:<password>@<IP_SQLSERVER>/SolarWindsOrion26?tables=InterfaceTraffic \
        postgresql://migration_user:<password>@127.0.0.1/migratedb
      ```
      Catatan: pgloader membuat tabelnya sendiri dengan pemetaan tipe versinya sendiri — untuk tabel yang di-backfill lewat pgloader, **jangan** biarkan `schema_sync.py` membuat ulang tabel itu duluan (tidak masalah kalau urutannya pgloader dulu baru start stack, karena `CREATE TABLE IF NOT EXISTS` di `schema_sync.py` akan otomatis skip tabel yang sudah ada).

@@ -6,7 +6,7 @@
 -- scripts/01-enable-cdc.sql dan scripts/06-generate-postgres-ddl.py.
 -- ============================================================================
 
-USE [SolarWindsOrion];
+USE [SolarWindsOrion26];
 GO
 
 PRINT '======================================================'
