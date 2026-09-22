@@ -21,7 +21,7 @@ class SqlServer:
 				f"Encrypt={self.settings.sqlserver_encrypt};"
 				f"TrustServerCertificate={self.settings.sqlserver_trust_server_certificate};"
 			)
-			self.connection = pyodbc.connect(connection_string, autocommit=True)
+			self.connection = pyodbc.connect(connection_string, autocommit=True, timeout=60)
 		return self.connection
 
 	def query(self, sql: str, parameters: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
