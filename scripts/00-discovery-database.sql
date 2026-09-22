@@ -42,7 +42,7 @@ PRINT '3. ROW COUNTS:'
 SELECT
     OBJECT_SCHEMA_NAME(p.object_id) AS SchemaName,
     OBJECT_NAME(p.object_id) AS TableName,
-    SUM(p.rows) AS RowCount
+    SUM(p.rows) AS [RowCount]
 FROM sys.partitions p
 WHERE p.index_id IN (0, 1) AND OBJECTPROPERTY(p.object_id, 'IsUserTable') = 1
 GROUP BY p.object_id
