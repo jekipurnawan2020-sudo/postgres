@@ -317,7 +317,29 @@ INITIAL_LOAD_ENABLED=true    # false kalau hanya mau capture perubahan baru, tan
 
 Karena target PostgreSQL masih kosong, pertanyaannya: perlu dump manual dari SQL Server dulu, atau biarkan pipeline yang isi?
 
-### Jawaban singkat: tidak perlu dump manual untuk sebagian besar tabel
+### Perkiraan dari ukuran `.mdf`: 980 MB → kemungkinan besar tidak perlu jalur bulk
+
+Ukuran file data (`.mdf`) SolarWinds yang Anda lihat: **980 MB**. Ini cukup untuk membuat keputusan awal tanpa menunggu apa pun.
+
+**Perhitungan kasar:**
+- 980 MB adalah ruang yang **dialokasikan** SQL Server ke `.mdf`, bukan otomatis sama dengan data terpakai — SQL Server lazim mengalokasikan ruang kosong yang belum terisi di dalamnya, jadi data aktual kemungkinan **lebih kecil** dari 980 MB, bukan lebih besar.
+- Index & overhead katalog biasanya makan 30-50% dari ukuran tabel pada skema semacam SolarWinds (banyak index untuk mendukung query dashboard) → data tabel murni diperkirakan sekitar 500-700 MB.
+- Baris rata-rata tabel SolarWinds (campuran `int`/`varchar`/`datetime`/`float`) biasanya 150-400 byte → estimasi **total baris di SELURUH tabel sekitar 1,5-4 juta baris**, bukan puluhan/ratusan juta.
+- Skenario terburuk (satu tabel time-series sangat sempit, mis. `InterfaceID + DateTime + float`, ~30-50 byte/baris, memakai porsi besar dari 700 MB) paling banter menghasilkan **satu tabel belasan juta baris** — itu pun kasus ekstrem, bukan tipikal.
+
+**Kesimpulan**: 980 MB adalah database SolarWinds yang **kecil** — instalasi produksi SolarWinds yang sudah lama jalan dengan modul lengkap biasanya puluhan sampai ratusan GB. Kemungkinan ini instalasi baru, retention period pendek, atau modul aktifnya terbatas (NPM inti saja, tanpa riwayat panjang SAM/NTA).
+
+**Rekomendasi saya: skip jalur bulk dump (pgloader/bcp) sepenuhnya, pakai mekanisme initial load otomatis pipeline untuk SEMUA tabel.** Di skala ini, initial load lewat Kafka (sudah batched-flush, bukan per-baris — lihat [producer.py](../cdc/app/producer.py)) realistis selesai dalam hitungan menit, bukan jam. Kompleksitas tambahan bulk-copy (instal pgloader, seed LSN manual, risiko mismatch tipe data dari pgloader) tidak sepadan manfaatnya di ukuran data segini.
+
+**Tapi tetap verifikasi, jangan cuma percaya estimasi** — dua alasan konkret:
+1. Estimasi di atas asumsi kasar berbasis rata-rata; bisa meleset kalau distribusi baris antar tabel timpang.
+2. **Kemungkinan modul NTA (NetFlow Traffic Analyzer) menyimpan flow data di database SQL Server yang TERPISAH**, bukan di `SolarWinds` yang sama — kalau modul itu aktif dan datanya perlu ikut dimigrasikan, 980 MB ini **tidak mencakupnya sama sekali**. Cek lewat SSMS → Object Explorer → Databases, lihat apakah ada database lain bernama sejenis `SolarWindsNTA`/`NTA`. Kalau ada dan perlu dimigrasikan, itu butuh instance pipeline kedua yang menunjuk `SQLSERVER_DATABASE` berbeda — di luar scope estimasi 980 MB ini.
+
+**Implementasi/langkah konkretnya**: jalankan Fase 3 (`scripts/00-discovery-database.sql`) sebagai konfirmasi murah (hitungan detik) sebelum deploy.
+- Kalau hasilnya cocok dengan estimasi ini (tidak ada tabel dengan row count jutaan+, tidak ada database NTA terpisah yang perlu ikut) → lanjut langsung ke Fase 9 dengan `INITIAL_LOAD_ENABLED=true` untuk semua tabel (nilai default yang sudah ada di contoh `.env` Fase 7), **lewati bagian "jalur bulk dump" di bawah sepenuhnya**.
+- Kalau ternyata ada tabel dengan row count jauh di luar dugaan, atau ketemu database NTA terpisah yang perlu ikut dimigrasikan → baru pertimbangkan mekanisme bulk yang dijelaskan di bawah, khusus untuk tabel/database yang bermasalah itu saja (tidak perlu diterapkan ke semua tabel).
+
+### Mekanisme initial load otomatis (opsi default — kemungkinan ini yang dipakai di kasus Anda)
 
 Pipeline ini **sudah otomatis** melakukan initial load. Kalau `INITIAL_LOAD_ENABLED=true` (Fase 7), begini alurnya per tabel saat container `cdc` pertama kali jalan (lihat `publish_initial_load()` di [main.py](../cdc/app/main.py)):
 
@@ -328,9 +350,9 @@ Pipeline ini **sudah otomatis** melakukan initial load. Kalau `INITIAL_LOAD_ENAB
 
 Ini satu mekanisme untuk snapshot awal *dan* perubahan berkelanjutan, tanpa koordinasi manual — untuk kebanyakan tabel SolarWinds (inventori/konfigurasi: `Nodes`, `Interfaces`, `Volumes`, `AlertConfigurations`, dst) ini sudah cukup dan paling "smooth".
 
-### Kapan dump manual tetap lebih baik
+### Jalur bulk dump (fallback) — kemungkinan besar tidak Anda perlukan
 
-Untuk tabel **volume tinggi** — biasanya tabel time-series SolarWinds (`InterfaceTraffic`, `ResponseTime`, `CPULoad`, `APM_AvailabilityHistory`, tabel NetFlow, `Events`) — initial load lewat Kafka row-by-row kalah jauh dibanding bulk-copy native:
+Bagian ini berlaku hanya kalau Fase 3 membuktikan estimasi di atas salah untuk tabel tertentu. Untuk tabel **volume tinggi** — biasanya tabel time-series SolarWinds (`InterfaceTraffic`, `ResponseTime`, `CPULoad`, `APM_AvailabilityHistory`, tabel NetFlow, `Events`) — initial load lewat Kafka row-by-row kalah jauh dibanding bulk-copy native:
 
 - Tiap baris → JSON → produce ke Kafka → consume oleh JDBC Sink → `INSERT`. Overhead per baris jauh lebih besar daripada `bcp`/`COPY` yang bulk.
 - Initial load jutaan baris lewat jalur ini bisa berjam-jam, dan `SELECT *` yang panjang membebani SQL Server production selagi SolarWinds tetap live dipakai.
