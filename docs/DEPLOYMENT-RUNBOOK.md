@@ -234,7 +234,7 @@ Catat hasilnya: jumlah tabel, tabel besar (row count tinggi — jadi perhatian u
 
 Login pakai akun **admin** (bukan `cdc_user`).
 
-1. Jalankan `scripts/01-enable-cdc.sql` di database `SolarWindsOrion`.
+1. Jalankan `scripts/01-enable-cdc.sql` di database `SolarWindsOrion`, **satu eksekusi penuh** dari baris paling atas sampai paling bawah (jangan select sebagian — variabel/cursor T-SQL cuma hidup dalam satu batch, kalau dipisah akan error "Must declare the scalar variable").
 2. Verifikasi:
 
 ```
@@ -248,6 +248,16 @@ scripts/04-check-cdc.sql             -- capture instance yang aktif
 ```sql
 EXEC msdb.dbo.sp_help_job @job_name = N'%capture%';
 ```
+
+### Catatan untuk instalasi besar (ribuan tabel, banyak modul aktif)
+
+Kalau discovery Fase 3 menunjukkan jumlah tabel sangat banyak (mis. instalasi SolarWinds dengan modul APM/ASA/Asset aktif, bukan cuma NPM inti — bisa 2000+ tabel), dua hal berikut penting di `scripts/01-enable-cdc.sql`:
+
+- **`@supports_net_changes` diset `0`, bukan `1`.** Pipeline ini (lihat [cdc/app/cdc_reader.py](../cdc/app/cdc_reader.py)) hanya pernah memanggil `cdc.fn_cdc_get_all_changes_*`, tidak pernah `fn_cdc_get_net_changes_*` — jadi fitur net-changes tidak dipakai sama sekali. Kalau diset `1`, sebagian tabel (biasanya yang kolomnya lebar) bisa gagal dengan error terkait evaluasi "update mask" yang butuh CLR integration, kalau `clr enabled` di instance itu mati (default umum). Set `0` menghindari dependency itu tanpa kehilangan fungsi apa pun untuk pipeline ini.
+- **Loop dibungkus `TRY/CATCH`** supaya satu tabel bermasalah tidak menghentikan seluruh proses untuk ribuan tabel lainnya. Kegagalan paling umum: **tabel memory-optimized (In-Memory OLTP)** — SQL Server menolaknya dengan `Msg 41385: A memory-optimized table cannot be enabled for Change Data Capture`. Ini keterbatasan resmi produk, tidak ada workaround; tabel jenis ini otomatis di-skip dan dicatat di tabel sementara `#cdc_enable_failures` yang ditampilkan di akhir run — tinjau daftar itu untuk menentukan apakah tabel yang di-skip butuh penanganan migrasi terpisah (snapshot manual sekali jalan) atau aman diabaikan. Cek tabel memory-optimized lewat:
+  ```sql
+  SELECT name FROM sys.tables WHERE is_memory_optimized = 1;
+  ```
 
 ---
 
